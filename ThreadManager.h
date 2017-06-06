@@ -5,15 +5,20 @@
 
 // --- 线程管理工具
 
+typedef THREAD_FACTORY_TYPE T;
+
 const unsigned int MAX_BUFNUM = 4;
 static bool ThreadSleep = false;
 
 using namespace::std;
 
-template<typename T>
+//
+// 生产者消费者的共享资源区
+//
+template<typename Type>
 class Respository {
 public:
-	deque<T> itemsBuff;
+	deque<Type> itemsBuff;
 	mutex	mtx;
 	mutex	mtxProduce;
 	mutex	mtxConsume;
@@ -21,7 +26,7 @@ public:
 	condition_variable REPO_NOT_EMPTY;
 
 	// 构造
-	Respository() : itemsBuff(deque<T>(0)) {};
+	Respository() : itemsBuff(deque<Type>(0)) {};
 
 	// 初始化
 	void Init() {
@@ -29,9 +34,12 @@ public:
 	}
 };
 
-template <class T>
-class Factory {
-private:
+// 
+// 工厂基类
+//
+class FactoryBase
+{
+	private:
 	Respository<T> m_repo;
 
 	// 生产一个事物
@@ -70,12 +78,11 @@ public:
 	}
 
 	// 生产事件
-	void ProduceTask() {
+	virtual void ProduceTask() {
 		while (true && !ThreadSleep) {
 			Sleep(1);
 			unique_lock<mutex> lock(m_repo.mtxProduce);
 
-			// _winCapture->StartCapture();
 			WinCapture* _winCapture = new WinCapture;
 			T item = new WINCAPTURE_FRAMEDATA;
 			_winCapture->StartCapture();
@@ -89,7 +96,7 @@ public:
 	}
 
 	// 消费事件
-	void ConsumeTask() {
+	virtual void ConsumeTask() {
 		while (true) {
 			Sleep(1);
 			unique_lock<mutex> lock(m_repo.mtxConsume);
@@ -100,6 +107,15 @@ public:
 			lock.unlock();
 		}
 	}
+
+	// 析构
+	virtual ~FactoryBase() {
+
+	};
+};
+
+class IFactory : public FactoryBase
+{
 };
 
 class ThreadManager
@@ -108,7 +124,7 @@ private:
 	std::vector<thread*> m_Producers;
 	std::vector<thread*> m_Consumers;
 	WinCapture* m_WinCapture;
-	Factory<THREAD_FACTORY_TYPE>* m_Factory;
+	FactoryBase* m_Factory;
 
 	bool m_Sleep;
 public:

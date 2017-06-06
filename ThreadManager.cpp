@@ -2,7 +2,7 @@
 
 using namespace::std;
 
-ThreadManager::ThreadManager() : m_Producers(0), m_Consumers(0), m_WinCapture(new WinCapture), m_Factory(new Factory<THREAD_FACTORY_TYPE>), m_Sleep(false)
+ThreadManager::ThreadManager() : m_Producers(0), m_Consumers(0), m_WinCapture(new WinCapture), m_Factory(new IFactory), m_Sleep(false)
 {
 	m_WinCapture->GetWindowList();
 	m_WinCapture->SetCaptureTarget("WinCaptureDemo - Microsoft Visual Studio");
@@ -15,7 +15,7 @@ ThreadManager::~ThreadManager()
 
 bool ThreadManager::AddProducer() {
 	
-	thread* someProducer = new thread(&Factory<THREAD_FACTORY_TYPE>::ProduceTask, m_Factory);	// thread 对象不可以拷贝构造
+	thread* someProducer = new thread(&IFactory::ProduceTask, m_Factory);	// thread 对象不可以拷贝构造
 	m_Producers.push_back(someProducer);
 
 	return true;
@@ -23,7 +23,7 @@ bool ThreadManager::AddProducer() {
 
 bool ThreadManager::AddConsumer( ) {
 	
-	thread* someConsumer = new thread(&Factory<THREAD_FACTORY_TYPE>::ConsumeTask, m_Factory);
+	thread* someConsumer = new thread(&IFactory::ConsumeTask, m_Factory);
 	m_Consumers.push_back(someConsumer);
 
 	return true;

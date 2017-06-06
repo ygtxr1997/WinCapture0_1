@@ -246,6 +246,14 @@ WResult WinCapture::SetCaptureTarget(const unsigned int x, const unsigned int y,
 	}
 }
 
+//
+// ÊÇ·ñÏÔÊ¾Êó±ê
+//
+void WinCapture::EnableCursorDisplay(bool bDisplay)
+{
+	m_CaptureSetting->IsDisplay = bDisplay;
+}
+
 // ------------------------- Callback ----------------------------
 
 //

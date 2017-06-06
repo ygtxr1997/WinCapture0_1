@@ -10,21 +10,19 @@
 int _tmain(int argc, _TCHAR* argv[])
 {
 	ThreadManager* threadManager = new ThreadManager();
-	// class Factory<THREAD_FACTORY_TYPE>* myFactory = new Factory<THREAD_FACTORY_TYPE>;
+	threadManager->EnableCursorDisplay(false);
 	
 	threadManager->AddProducer();
 	threadManager->AddConsumer();
 	threadManager->AddConsumer();
 
-	/*WinCapture* winCapture = new WinCapture;
-	winCapture->GetWindowList();
-	winCapture->SetCaptureTarget("WinCaptureDemo - Microsoft Visual Studio");
-	for (int i = 0; i < TEST_TIME; ++i)
-		winCapture->StartCapture();*/
-
 	OutputDebugString("任务完成\n");
-	Sleep(5000);
+	Sleep(20000);
 	threadManager->StopProducers();
+
+	/*Sleep(1000);
+	threadManager->ReStartTasks();*/
+
 	getchar();
 	return 0;
 }

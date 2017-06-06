@@ -8,7 +8,6 @@
 typedef THREAD_FACTORY_TYPE T;
 
 const unsigned int MAX_BUFNUM = 4;
-static bool ThreadSleep = false;
 
 using namespace::std;
 
@@ -40,7 +39,7 @@ public:
 class FactoryBase
 {
 	private:
-	Respository<T> m_repo;
+		Respository<T> m_repo;
 
 	// 生产一个事物
 	void m_ProduceItem(Respository<T> &m_repo, T item) {
@@ -73,13 +72,20 @@ class FactoryBase
 		return data;
 	}
 public:
+	bool m_Sleep;
+
+	FactoryBase() : m_Sleep(false) {
+
+	}
+
 	void Reset() {
 		m_repo.Init();
 	}
 
 	// 生产事件
 	virtual void ProduceTask() {
-		while (true && !ThreadSleep) {
+		while (true) {
+			if (m_Sleep) continue;
 			Sleep(1);
 			unique_lock<mutex> lock(m_repo.mtxProduce);
 
@@ -126,19 +132,30 @@ private:
 	WinCapture* m_WinCapture;
 	FactoryBase* m_Factory;
 
-	bool m_Sleep;
 public:
 	ThreadManager();
 	~ThreadManager();
 
-	// bool AddProducer( Factory<THREAD_FACTORY_TYPE>* args);
 	bool AddProducer();
 
-	// bool AddConsumer( Factory<THREAD_FACTORY_TYPE>* args);
 	bool AddConsumer();
 
 	void StopProducers();
 
 	bool ReStartTasks();
+
+	WResult SetCaptureCallback();
+
+	WINCAPTURE_ISCAPTURING IsCapturing();
+
+	WResult SetFPS(unsigned int uFPS);
+
+	WResult SetCaptureTarget(std::string WinID);
+
+	WResult SetCaptureTarget(RECT rt, bool bFollowupCursor = false, POINT ptAnchor = { 0, 0 });
+
+	WResult SetCaptureTarget(unsigned int x, unsigned int y, unsigned int width, unsigned int height, bool bFollowupCursor = false, POINT ptAnchor = { 0, 0 });
+
+	void EnableCursorDisplay(bool bDisplay);
 };
 

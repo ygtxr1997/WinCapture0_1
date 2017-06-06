@@ -4,8 +4,8 @@
 
 class WinCapture
 {
-private:
-	// 成员
+protected:
+	// 成员, 友元可以访问
 	WINCAPTURE_ISCAPTURING m_IsCapturing;		// 是否正在捕获
 	WINCAPTURE_MODE m_CaptureMode;				// 捕获模式(全屏, 窗口)
 	WINCAPTURE_WINLIST* m_WinList;						// 当前窗口列表
@@ -13,24 +13,25 @@ private:
 	WINCAPTURE_FRAMEDATA* m_FrameData;		// 帧数据
 	// 方法
 	WResult _GetSnapShotByRect(RECT targetRECT);
-			// BOOL CALLBACK _EnumWindowsProc(HWND hWnd, LPARAM lParam);
 public:
 	WinCapture();
 	~WinCapture();
 
-	WResult SetCaptureCallback();
+	friend class ThreadManager;
 
-	WResult StartCapture();
+	WResult SetCaptureCallback(); 
 
-	WResult StopCapture();
+	WResult StartCapture(); // p
+
+	WResult StopCapture(); // p
 
 	WINCAPTURE_ISCAPTURING IsCapturing();
 
 	WResult SetFPS(unsigned int uFPS);
 
-	WResult GetWindowList();
+	WResult GetWindowList(); // p
 
-	void FreeWindowList();
+	void FreeWindowList(); // pi
 
 	WResult SetCaptureTarget(std::string WinID);
 

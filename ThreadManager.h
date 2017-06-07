@@ -38,8 +38,9 @@ public:
 //
 class FactoryBase
 {
-	private:
-		Respository<T> m_repo;
+private:
+	Respository<T> m_repo;
+	friend ThreadManager;
 
 	// 生产一个事物
 	void m_ProduceItem(Respository<T> &m_repo, T item) {
@@ -71,9 +72,13 @@ class FactoryBase
 		lock.unlock();
 		return data;
 	}
+
+protected:
+	WinCapture* _winCapture = new WinCapture;
+
 public:
 	bool m_Sleep;
-
+	
 	FactoryBase() : m_Sleep(false) {
 
 	}
@@ -89,7 +94,8 @@ public:
 			Sleep(1);
 			unique_lock<mutex> lock(m_repo.mtxProduce);
 
-			WinCapture* _winCapture = new WinCapture;
+			_winCapture->m_CaptureSetting->IsDisplay = false;
+			_winCapture->SetCaptureTarget("命令提示符");
 			T item = new WINCAPTURE_FRAMEDATA;
 			_winCapture->StartCapture();
 			_winCapture->OnFinishedOneFrame(item);
@@ -104,7 +110,7 @@ public:
 	// 消费事件
 	virtual void ConsumeTask() {
 		while (true) {
-			Sleep(1);
+			Sleep(51);
 			unique_lock<mutex> lock(m_repo.mtxConsume);
 
 			T item = m_ConsumeItem(m_repo);
@@ -129,7 +135,7 @@ class ThreadManager
 private:
 	std::vector<thread*> m_Producers;
 	std::vector<thread*> m_Consumers;
-	WinCapture* m_WinCapture;
+	// WinCapture* m_WinCapture;
 	FactoryBase* m_Factory;
 
 public:
@@ -150,7 +156,7 @@ public:
 
 	WResult SetFPS(unsigned int uFPS);
 
-	WResult SetCaptureTarget(std::string WinID);
+	WResult SetCaptureTarget(std::string WinText);
 
 	WResult SetCaptureTarget(RECT rt, bool bFollowupCursor = false, POINT ptAnchor = { 0, 0 });
 

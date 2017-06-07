@@ -1,4 +1,5 @@
 #include "WinCapture.h"
+#include <time.h>
 
 //
 // 初始化列表构造函数
@@ -147,7 +148,7 @@ void WinCapture::FreeWindowList()
 //
 // 根据WinID(WinTitle)设置捕获目标
 // 
-WResult WinCapture::SetCaptureTarget(std::string WinID)
+WResult WinCapture::SetCaptureTarget(std::string WinText)
 {
 	// 获取窗口列表
 	if (!m_WinList->Title.size())
@@ -157,7 +158,7 @@ WResult WinCapture::SetCaptureTarget(std::string WinID)
 	bool findFlag = false;
 	unsigned int index = 0;
 	for (; index < m_WinList->Title.size() && !findFlag; index++) {
-		if (m_WinList->Title[index] == WinID)
+		if (m_WinList->Title[index] == WinText)
 			findFlag = true;
 	}
 
@@ -177,6 +178,7 @@ WResult WinCapture::SetCaptureTarget(std::string WinID)
 		return WINCAPTURE_ERROR_EXPECTED;
 	} 
 	else {
+		m_CaptureSetting->WinID = wantedWindow;
 		if (IsIconic(wantedWindow)) {		// 窗口处于最小化
 			m_CaptureMode = WINCAPTURE_MODE_FULLSCREEN;
 			OutputDebugString("窗口处于最小化\n");
@@ -277,15 +279,21 @@ void WinCapture::OnFinishedOneFrame(WINCAPTURE_FRAMEDATA* frameData)
 //
 // 根据矩形范围获取截图
 //
+//
 WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 {
+	HWND testWin = (HWND)m_CaptureSetting->WinID;
+
+	// 根据当前模式选择HDC为屏幕或者指定窗口
+	HDC hDC = m_CaptureMode == 0 ? GetDC(NULL) : GetDC(testWin);
+
 	// 算出长宽
 	UINT width = targetRECT.right - targetRECT.left;
 	UINT height = targetRECT.bottom - targetRECT.top;
 
 	// 获取桌面DC
-	HDC hDC;
-	hDC = CreateDC("DISPLAY", NULL, NULL, NULL);
+	// HDC hDC;
+	// hDC = GetDC(GetDesktopWindow());
 
 	// 桌面DC的适配器
 	HDC hCompatibleDC = CreateCompatibleDC(hDC);
@@ -296,8 +304,11 @@ WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 	// 将位图传入DC适配器
 	SelectObject(hCompatibleDC, hBitmap);
 
+	clock_t t1, t2;	// just for test
+	t1 = clock();		// just for test
 	// 使用BitBlt
 	BitBlt(hCompatibleDC, 0, 0, width, height, hDC, targetRECT.left, targetRECT.top, SRCCOPY);
+	t2 = clock();		// just for test
 
 	// 获取调色板
 	HPALETTE hPalette = (HPALETTE)GetStockObject(DEFAULT_PALETTE);
@@ -378,13 +389,21 @@ WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 		LPPOINT cursorPos = new POINT;
 		RtlZeroMemory(cursorPos, sizeof(POINT));
 		GetCursorPos(cursorPos);
+
+		// 边界处理
+		if (cursorPos->x < targetRECT.left)		cursorPos->x = targetRECT.left;
+		if (cursorPos->y < targetRECT.top)		cursorPos->y = targetRECT.top;
+		if (cursorPos->x > targetRECT.right)		cursorPos->x = targetRECT.right;
+		if (cursorPos->y > targetRECT.bottom - 30)		cursorPos->y = targetRECT.bottom - 30;
+
+
 		m_FrameData->CursorPos = cursorPos;
 
 		// 绘制鼠标
 		BYTE* p = (LPBYTE)hDIB;
 		p += lpBitmapInfoHeader->biSize;
-		for (int i = cursorPos->x - targetRECT.left; i < cursorPos->x - targetRECT.left + 20; i++) {
-			for (int j = cursorPos->y - targetRECT.top; j < cursorPos->y - targetRECT.top + 30; j++) {
+		for (int i = cursorPos->x - targetRECT.left; i < cursorPos->x - targetRECT.left + 20 && i >= 30 && i <= GetSystemMetrics(SM_CXSCREEN) - 30; i++) {
+			for (int j = cursorPos->y - targetRECT.top; j < cursorPos->y - targetRECT.top + 30 && j >= 30 && j <= GetSystemMetrics(SM_CYSCREEN) - 30; j++) {
 				if ((i < cursorPos->x - targetRECT.left + 3 || i > cursorPos->x - targetRECT.left + 17)
 					&& (j < cursorPos->y - targetRECT.top + 3 || cursorPos->y - targetRECT.top + 27)) {
 					if (p + 3 * ((bitmapInfoHeader.biHeight - j) * bitmapInfoHeader.biWidth + (i))) {
@@ -416,29 +435,31 @@ WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 	ReleaseDC(NULL, hTmpDC);
 
 	// 文件操作
-	//BITMAPFILEHEADER* bitmapFileHeader = new BITMAPFILEHEADER;
-	//ZeroMemory(bitmapFileHeader, sizeof(BITMAPFILEHEADER));
-	//bitmapFileHeader->bfType = (DWORD)0x4D42;
-	//bitmapFileHeader->bfSize = 54 + bitmapInfoHeader.biSizeImage;
-	//bitmapFileHeader->bfOffBits = 54;
+	if (WINCAPTURE_SAVE_FILE) {
+		BITMAPFILEHEADER* bitmapFileHeader = new BITMAPFILEHEADER;
+		ZeroMemory(bitmapFileHeader, sizeof(BITMAPFILEHEADER));
+		bitmapFileHeader->bfType = (DWORD)0x4D42;
+		bitmapFileHeader->bfSize = 54 + bitmapInfoHeader.biSizeImage;
+		bitmapFileHeader->bfOffBits = 54;
 
-	//DWORD written = 0;
+		DWORD written = 0;
 
-	//HANDLE hFile = CreateFile("C:/Users/apple/Pictures/CapureDemo0_1.bmp", GENERIC_ALL, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		HANDLE hFile = CreateFile("C:/Users/apple/Pictures/CapureDemo0_1.bmp", GENERIC_ALL, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
-	//if (hFile == INVALID_HANDLE_VALUE)
-	//{
-	//	return WINCAPTURE_ERROR_EXPECTED;
-	//}
+		if (hFile == INVALID_HANDLE_VALUE)
+		{
+			return WINCAPTURE_ERROR_EXPECTED;
+		}
 
-	//b = WriteFile(hFile, bitmapFileHeader, sizeof(BITMAPFILEHEADER), &written, NULL);
-	//b = WriteFile(hFile, hDIB, bitmapFileHeader->bfSize, &written, NULL);
+		b = WriteFile(hFile, bitmapFileHeader, sizeof(BITMAPFILEHEADER), &written, NULL);
+		b = WriteFile(hFile, hDIB, bitmapFileHeader->bfSize, &written, NULL);
 
-	//FlushFileBuffers(hFile);
-	//CloseHandle(hFile);
+		FlushFileBuffers(hFile);
+		CloseHandle(hFile);
 
-	//delete bitmapFileHeader;
-	//bitmapFileHeader = NULL;
+		delete bitmapFileHeader;
+		bitmapFileHeader = NULL;
+	}
 
 	ReleaseDC(NULL, hDC);
 	GlobalFree(hDIB);
@@ -448,7 +469,7 @@ WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 	DeleteObject(hBitmap);
 	DeleteObject(lpBitmapInfoHeader);
 
-	hDC = NULL; hBitmap = NULL; hPalette = NULL; _bitmap = { 0 }; hDIB = NULL; hCompatibleDC = NULL; hMem = NULL; lpBitmapInfoHeader = NULL; 
+	hDC = NULL; hBitmap = NULL; hPalette = NULL; _bitmap = { 0 }; hDIB = NULL; hCompatibleDC = NULL; hMem = NULL; lpBitmapInfoHeader = NULL;
 
 	return WINCAPTURE_SUCCESS;
 }

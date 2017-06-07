@@ -18,6 +18,7 @@ public:
 	~WinCapture();
 
 	friend class ThreadManager;
+	friend class FactoryBase;
 
 	WResult SetCaptureCallback(); 
 
@@ -33,7 +34,7 @@ public:
 
 	void FreeWindowList(); // pi
 
-	WResult SetCaptureTarget(std::string WinID);
+	WResult SetCaptureTarget(std::string WinText);
 
 	WResult SetCaptureTarget(RECT rt, bool bFollowupCursor = false, POINT ptAnchor = { 0, 0 });
 

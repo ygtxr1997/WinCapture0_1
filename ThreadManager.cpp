@@ -2,10 +2,12 @@
 
 using namespace::std;
 
-ThreadManager::ThreadManager() : m_Producers(0), m_Consumers(0), m_WinCapture(new WinCapture), m_Factory(new IFactory)
+ThreadManager::ThreadManager() : m_Producers(0), m_Consumers(0), m_Factory(new IFactory)
 {
-	m_WinCapture->GetWindowList();
-	m_WinCapture->SetCaptureTarget("WinCaptureDemo - Microsoft Visual Studio");
+	// m_WinCapture->GetWindowList();
+	// m_WinCapture->SetCaptureTarget("命令提示符");
+	m_Factory->_winCapture->GetWindowList();
+	m_Factory->_winCapture->SetCaptureTarget("命令提示符");
 }
 
 
@@ -31,7 +33,7 @@ bool ThreadManager::AddConsumer( ) {
 
 void ThreadManager::StopProducers() {
 	m_Factory->m_Sleep = true;
-	m_WinCapture->StopCapture();
+	m_Factory->_winCapture->StopCapture();
 }
 
 bool ThreadManager::ReStartTasks() {
@@ -44,35 +46,35 @@ bool ThreadManager::ReStartTasks() {
 
 WResult ThreadManager::SetCaptureCallback()
 {
-	return m_WinCapture->SetCaptureCallback();
+	return m_Factory->_winCapture->SetCaptureCallback();
 }
 
 WINCAPTURE_ISCAPTURING ThreadManager::IsCapturing()
 {
-	return m_WinCapture->IsCapturing();
+	return m_Factory->_winCapture->IsCapturing();
 }
 
 WResult ThreadManager::SetFPS(unsigned int uFPS)
 {
-	return m_WinCapture->SetFPS(uFPS);
+	return m_Factory->_winCapture->SetFPS(uFPS);
 }
 
-WResult ThreadManager::SetCaptureTarget(std::string WinID)
+WResult ThreadManager::SetCaptureTarget(std::string WinText)
 {
-	return m_WinCapture->SetCaptureTarget(WinID);
+	return m_Factory->_winCapture->SetCaptureTarget(WinText);
 }
 
 WResult ThreadManager::SetCaptureTarget(RECT rt, bool bFollowupCursor, POINT ptAnchor)
 {
-	return m_WinCapture->SetCaptureTarget(rt, bFollowupCursor, ptAnchor);
+	return m_Factory->_winCapture->SetCaptureTarget(rt, bFollowupCursor, ptAnchor);
 }
 
 WResult ThreadManager::SetCaptureTarget(unsigned int x, unsigned int y, unsigned int width, unsigned int height, bool bFollowupCursor, POINT ptAnchor)
 {
-	return m_WinCapture->SetCaptureTarget( x, y, width, height, bFollowupCursor, ptAnchor);
+	return m_Factory->_winCapture->SetCaptureTarget(x, y, width, height, bFollowupCursor, ptAnchor);
 }
 
 void ThreadManager::EnableCursorDisplay(bool bDisplay)
 {
-	m_WinCapture->EnableCursorDisplay(bDisplay);
+	m_Factory->_winCapture->EnableCursorDisplay(bDisplay);
 }

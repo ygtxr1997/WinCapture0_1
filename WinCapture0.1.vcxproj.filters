@@ -27,6 +27,12 @@
     <ClInclude Include="WinCapture.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Bridge-WinCapture.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="C-Bridge.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="WinCapture0.1.cpp">

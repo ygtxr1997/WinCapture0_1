@@ -21,6 +21,8 @@
 #define	WINCAPTURE_MAX_WIND	200
 #define	WINCAPTURE_MAX_FPS		220
 
+#define	WINCAPTURE_SAVE_FILE		false
+
 //
 // “Ï≥£¥¶¿Ì
 //
@@ -68,7 +70,7 @@ struct WINCAPTURE_SETTING
 {
 	WINCAPTURE_SETTING() : TimeStamp(0),
 		FPS(15),
-		WinID(new HWND),
+		WinID(NULL),
 		IsFollowCursor(true),
 		TargetRect({ 0, 0, 0, 0 }),
 		Anchor({ 0 }),
@@ -77,7 +79,7 @@ struct WINCAPTURE_SETTING
 
 	UINT64		TimeStamp;
 	UINT		FPS;
-	void*		WinID;
+	HWND		WinID;
 	bool			IsFollowCursor;
 	RECT		TargetRect;
 	POINT		Anchor;

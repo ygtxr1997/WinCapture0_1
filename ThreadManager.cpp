@@ -2,7 +2,7 @@
 
 using namespace::std;
 
-ThreadManager::ThreadManager() : m_Producers(0), m_Consumers(0), m_Factory(new IFactory)
+ThreadManager::ThreadManager() : m_Producers(0), m_Consumers(0), m_Factory(new IFactory), m_Callback(new ICallback)
 {
 	// m_WinCapture->GetWindowList();
 	// m_WinCapture->SetCaptureTarget("ÃüÁîÌáÊ¾·û");
@@ -44,9 +44,10 @@ bool ThreadManager::ReStartTasks() {
 	return true;
 }
 
-WResult ThreadManager::SetCaptureCallback()
+void ThreadManager::SetCaptureCallback(ICallback* pCallback)
 {
-	return m_Factory->_winCapture->SetCaptureCallback();
+	pCallback = m_Factory->_pCallback;
+	m_Callback = pCallback;
 }
 
 WINCAPTURE_ISCAPTURING ThreadManager::IsCapturing()
@@ -56,6 +57,7 @@ WINCAPTURE_ISCAPTURING ThreadManager::IsCapturing()
 
 WResult ThreadManager::SetFPS(unsigned int uFPS)
 {
+	m_Factory->_ComsumerSleepTime = (unsigned int)1000 / uFPS;
 	return m_Factory->_winCapture->SetFPS(uFPS);
 }
 
@@ -78,3 +80,10 @@ void ThreadManager::EnableCursorDisplay(bool bDisplay)
 {
 	m_Factory->_winCapture->EnableCursorDisplay(bDisplay);
 }
+
+void ThreadManager::OnFinishedOneFrame(WINCAPTURE_FRAMEDATA* outFrameData)
+{
+	m_Factory->_winCapture->OnFinishedOneFrame(outFrameData);
+}
+
+

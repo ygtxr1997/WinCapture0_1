@@ -74,12 +74,19 @@ private:
 	}
 
 protected:
+	ICallback* _pCallback;
 	WinCapture* _winCapture = new WinCapture;
+	UINT _ComsumerSleepTime = 51;
+	T item;
 
 public:
 	bool m_Sleep;
 	
-	FactoryBase() : m_Sleep(false) {
+	FactoryBase() : _pCallback(new ICallback), m_Sleep(false), item(new WINCAPTURE_FRAMEDATA) {
+		// 完全初始化
+		_pCallback->pwcFrameData = new WINCAPTURE_FRAMEDATA;
+		_pCallback->uTimeStamp = new UINT64;
+		_pCallback->ptMouse = new POINT;
 
 	}
 
@@ -95,10 +102,12 @@ public:
 			unique_lock<mutex> lock(m_repo.mtxProduce);
 
 			_winCapture->m_CaptureSetting->IsDisplay = false;
+			// _winCapture->SetCaptureTarget(RECT{ 0, 0, 1366, 768 }, 0, {0, 0});
 			_winCapture->SetCaptureTarget("命令提示符");
-			T item = new WINCAPTURE_FRAMEDATA;
+			
 			_winCapture->StartCapture();
 			_winCapture->OnFinishedOneFrame(item);
+			_winCapture->OnCapturedFrameAvailable(_pCallback->pwcFrameData, *(_pCallback->uTimeStamp), _pCallback->ptMouse);
 			
 			cout << "p-id " << this_thread::get_id() << " is producing x = " << item->CursorPos->x << " y = " << item->CursorPos->y <<endl;
 			m_ProduceItem(m_repo, item);
@@ -110,11 +119,20 @@ public:
 	// 消费事件
 	virtual void ConsumeTask() {
 		while (true) {
-			Sleep(51);
+			Sleep(_ComsumerSleepTime);
 			unique_lock<mutex> lock(m_repo.mtxConsume);
 
 			T item = m_ConsumeItem(m_repo);
 			cout << "c-id " << this_thread::get_id() << " is consuming " << endl;
+
+			static int i = 0;
+			i++;
+			string output("消费成功");
+			char string[5];
+			_itoa_s(i, string, 10);
+			for (int j = 0; j < 5; j++)
+				output.push_back(string[j]);
+				OutputDebugString(output.c_str()); OutputDebugString("\n");
 
 			lock.unlock();
 		}
@@ -135,8 +153,8 @@ class ThreadManager
 private:
 	std::vector<thread*> m_Producers;
 	std::vector<thread*> m_Consumers;
-	// WinCapture* m_WinCapture;
 	FactoryBase* m_Factory;
+	ICallback* m_Callback;
 
 public:
 	ThreadManager();
@@ -150,7 +168,7 @@ public:
 
 	bool ReStartTasks();
 
-	WResult SetCaptureCallback();
+	void SetCaptureCallback(ICallback* pCallback);
 
 	WINCAPTURE_ISCAPTURING IsCapturing();
 
@@ -163,5 +181,8 @@ public:
 	WResult SetCaptureTarget(unsigned int x, unsigned int y, unsigned int width, unsigned int height, bool bFollowupCursor = false, POINT ptAnchor = { 0, 0 });
 
 	void EnableCursorDisplay(bool bDisplay);
+
+	void  OnFinishedOneFrame(WINCAPTURE_FRAMEDATA* outFrameData);
+
 };
 

@@ -68,14 +68,14 @@ struct WINCAPTURE_WINLIST
 //
 struct WINCAPTURE_SETTING
 {
-	WINCAPTURE_SETTING() : TimeStamp(0),
+	/*WINCAPTURE_SETTING() : TimeStamp(0),
 		FPS(15),
 		WinID(NULL),
 		IsFollowCursor(true),
 		TargetRect({ 0, 0, 0, 0 }),
 		Anchor({ 0 }),
 		IsDisplay(true)
-	{}
+	{}*/
 
 	UINT64		TimeStamp;
 	UINT		FPS;
@@ -91,12 +91,24 @@ struct WINCAPTURE_SETTING
 //
 struct WINCAPTURE_FRAMEDATA
 {
-	WINCAPTURE_FRAMEDATA() : Data(new BYTE), BytesPerLine(32), CursorPos(new POINT)
+	WINCAPTURE_FRAMEDATA() : pData(new BYTE), BytesPerLine(32), CursorPos(new POINT)
 	{}
 
-	BYTE*		Data;
+	BYTE*		pData;
+	UINT64		uSize = 0;
 	UINT		BytesPerLine;
 	POINT*		CursorPos;
+};
+
+
+//
+// »Øµ÷Ö¸Õë
+//
+struct ICallback
+{
+	WINCAPTURE_FRAMEDATA* pwcFrameData;
+	UINT64* uTimeStamp;
+	POINT* ptMouse;
 };
 
 //

@@ -34,8 +34,9 @@ WinCapture::~WinCapture()
 //
 // 设置回调
 //
-WResult WinCapture::SetCaptureCallback()
+WResult WinCapture::SetCaptureCallback(WINCAPTURE_FRAMEDATA* pwcFrameData)
 {
+	pwcFrameData = m_FrameData;
 	return WINCAPTURE_SUCCESS;
 }
 
@@ -203,15 +204,15 @@ WResult WinCapture::SetCaptureTarget(std::string WinText)
 //
 WResult WinCapture::SetCaptureTarget(RECT rt, bool bFollowupCursor, POINT ptAnchor)
 {
-	if (rt.left < rt.right && rt.bottom < rt.top
-		&& rt.left > 0 && rt.right < GetSystemMetrics(SM_CXSCREEN)
-		&& rt.top > 0 && rt.bottom < GetSystemMetrics(SM_CYSCREEN)) {
+	if (rt.left < rt.right && rt.bottom > rt.top
+		&& rt.left >= 0 && rt.right <= GetSystemMetrics(SM_CXSCREEN)
+		&& rt.top >= 0 && rt.bottom <= GetSystemMetrics(SM_CYSCREEN)) {
 		m_CaptureSetting->TargetRect = rt;
 		m_CaptureSetting->IsFollowCursor = bFollowupCursor;
 		m_CaptureSetting->Anchor = ptAnchor;
 
 		m_CaptureMode = WINCAPTURE_MODE_RECT;
-		OutputDebugString("设置成功\n");
+		OutputDebugString("矩形范围设置成功\n");
 		return WINCAPTURE_SUCCESS;
 	}
 	else {
@@ -225,9 +226,9 @@ WResult WinCapture::SetCaptureTarget(RECT rt, bool bFollowupCursor, POINT ptAnch
 //
 WResult WinCapture::SetCaptureTarget(const unsigned int x, const unsigned int y, const unsigned int width, const unsigned height, const bool bFollowupCursor, POINT ptAnchor)
 {
-	if (x <= (UINT)GetSystemMetrics(SM_CXSCREEN)
+	if (x <= (UINT)GetSystemMetrics(SM_CXSCREEN) && x >= 0
 		&& x + width <= (UINT)GetSystemMetrics(SM_CXSCREEN)
-		&& y <= (UINT)GetSystemMetrics(SM_CYSCREEN)
+		&& y <= (UINT)GetSystemMetrics(SM_CYSCREEN) && y >= 0
 		&& y + height <= (UINT)GetSystemMetrics(SM_CYSCREEN) ){
 		m_CaptureSetting->TargetRect.left = x;
 		m_CaptureSetting->TargetRect.top = y;
@@ -263,12 +264,22 @@ void WinCapture::EnableCursorDisplay(bool bDisplay)
 //
 void WinCapture::OnFinishedOneFrame(WINCAPTURE_FRAMEDATA* frameData)
 {
-	frameData->Data = m_FrameData->Data;
+	frameData->pData = m_FrameData->pData;
 	frameData->BytesPerLine = m_FrameData->BytesPerLine;
 	frameData->CursorPos = m_FrameData->CursorPos;
-	// bytesPerLine = m_FrameData->BytesPerLine;
-	// uTimeStamp = m_CaptureSetting->TimeStamp;
-	// ptMousePos = { 0, 0 };
+	frameData->uSize = m_FrameData->uSize;
+}
+
+void WinCapture::OnCapturedFrameAvailable(WINCAPTURE_FRAMEDATA* userFrameData, UINT64 uTimeStamp, POINT* ptMouse)
+{
+	userFrameData->pData = m_FrameData->pData;
+	userFrameData->BytesPerLine = m_FrameData->BytesPerLine;
+	userFrameData->CursorPos = m_FrameData->CursorPos;
+	userFrameData->uSize = m_FrameData->uSize;
+
+	uTimeStamp = m_CaptureSetting->TimeStamp;
+
+	ptMouse = m_FrameData->CursorPos;
 }
 
 
@@ -285,7 +296,7 @@ WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 	HWND testWin = (HWND)m_CaptureSetting->WinID;
 
 	// 根据当前模式选择HDC为屏幕或者指定窗口
-	HDC hDC = m_CaptureMode == 0 ? GetDC(NULL) : GetDC(testWin);
+	HDC hDC = m_CaptureMode == 1 ? GetDC(testWin) : GetDC(NULL);
 
 	// 算出长宽
 	UINT width = targetRECT.right - targetRECT.left;
@@ -376,7 +387,13 @@ WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 	}
 
 	lpBitmapInfoHeader = (LPBITMAPINFOHEADER)hDIB;
-
+	
+	// 扩张m_FrameData->Data内存
+	if (m_FrameData->uSize != 0) 
+		delete m_FrameData->pData;
+	(m_FrameData->pData) = new BYTE[dwLength];
+	memcpy(m_FrameData->pData, reinterpret_cast<void*>(hMem), dwLength);
+	m_FrameData->uSize = dwLength;
 
 	b = GetDIBits(hTmpDC, hBitmap, 0L, (DWORD)bitmapInfoHeader.biHeight,
 		(LPBYTE)lpBitmapInfoHeader + (bitmapInfoHeader.biSize + nColors * sizeof(RGBQUAD)),
@@ -460,6 +477,8 @@ WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 		delete bitmapFileHeader;
 		bitmapFileHeader = NULL;
 	}
+
+
 
 	ReleaseDC(NULL, hDC);
 	GlobalFree(hDIB);

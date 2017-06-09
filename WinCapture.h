@@ -20,7 +20,7 @@ public:
 	friend class ThreadManager;
 	friend class FactoryBase;
 
-	WResult SetCaptureCallback(); 
+	WResult SetCaptureCallback(WINCAPTURE_FRAMEDATA* pwcFrameData); 
 
 	WResult StartCapture(); // p
 
@@ -44,6 +44,8 @@ public:
 
 	// callback
 	void OnFinishedOneFrame(WINCAPTURE_FRAMEDATA* frameData);
+
+	void OnCapturedFrameAvailable(WINCAPTURE_FRAMEDATA* userFrameData, UINT64 uTimeStamp, POINT* ptMouse);
 
 };
 

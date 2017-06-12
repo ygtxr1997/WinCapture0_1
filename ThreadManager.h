@@ -101,9 +101,9 @@ public:
 			Sleep(1);
 			unique_lock<mutex> lock(m_repo.mtxProduce);
 
-			_winCapture->m_CaptureSetting->IsDisplay = false;
+			// _winCapture->m_CaptureSetting->IsDisplay = false;
 			// _winCapture->SetCaptureTarget(RECT{ 0, 0, 1366, 768 }, 0, {0, 0});
-			_winCapture->SetCaptureTarget("命令提示符");
+			// _winCapture->SetCaptureTarget("命令提示符");
 			
 			_winCapture->StartCapture();
 			_winCapture->OnFinishedOneFrame(item);
@@ -125,6 +125,7 @@ public:
 			T item = m_ConsumeItem(m_repo);
 			cout << "c-id " << this_thread::get_id() << " is consuming " << endl;
 
+			// 显示调试信息
 			static int i = 0;
 			i++;
 			string output("消费成功");
@@ -132,7 +133,7 @@ public:
 			_itoa_s(i, string, 10);
 			for (int j = 0; j < 5; j++)
 				output.push_back(string[j]);
-				OutputDebugString(output.c_str()); OutputDebugString("\n");
+			OutputDebugString(output.c_str()); OutputDebugString("\n");
 
 			lock.unlock();
 		}

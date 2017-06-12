@@ -4,10 +4,8 @@ using namespace::std;
 
 ThreadManager::ThreadManager() : m_Producers(0), m_Consumers(0), m_Factory(new IFactory), m_Callback(new ICallback)
 {
-	// m_WinCapture->GetWindowList();
-	// m_WinCapture->SetCaptureTarget("命令提示符");
-	m_Factory->_winCapture->GetWindowList();
-	m_Factory->_winCapture->SetCaptureTarget("命令提示符");
+	/*m_Factory->_winCapture->GetWindowList();
+	m_Factory->_winCapture->SetCaptureTarget("命令提示符");*/
 }
 
 

@@ -4,7 +4,8 @@
 //
 // 初始化列表构造函数
 //
-WinCapture::WinCapture() : m_IsCapturing(WINCAPTURE_FALSE),
+WinCapture::WinCapture() : m_bModeFirstTime(true),
+	m_IsCapturing(WINCAPTURE_FALSE),
 	m_WinList(new WINCAPTURE_WINLIST),
 	m_CaptureSetting(new WINCAPTURE_SETTING),
 	m_CaptureMode(WINCAPTURE_MODE_FULLSCREEN),
@@ -52,6 +53,43 @@ WResult WinCapture::StartCapture()
 		m_CaptureSetting->TargetRect.top = 0;
 		m_CaptureSetting->TargetRect.bottom = GetSystemMetrics(SM_CYSCREEN);
 	}
+
+	// 如果是HWND显示模式, 但是窗口发生了变化
+	if (WINCAPTURE_MODE_WINID & m_CaptureMode) {
+		if (!IsWindowVisible(m_CaptureSetting->WinID)) {
+			// 无论是否再打开窗口, 都显示黑屏
+			OutputDebugString("窗口已关闭\n");
+			m_CaptureMode |= WINCAPTURE_MODE_CLOSED;
+		}
+		else if (IsIconic(m_CaptureSetting->WinID)) {
+			// 暂时显示黑屏, 等窗口打开后再显示出来
+			OutputDebugString("窗口处于最小化\n");
+			m_CaptureMode |= WINCAPTURE_MODE_ICONIC;
+		}
+		else {
+			OutputDebugString("窗口处于正常状态\n");
+			if (m_CaptureMode & WINCAPTURE_MODE_ICONIC) {
+				// 窗口从最小化恢复
+				m_CaptureMode &= ~WINCAPTURE_MODE_ICONIC;
+				OutputDebugString("窗口从最小化恢复\n");
+			}
+		}
+	}
+
+	// 显示截图模式
+	if (m_CaptureMode & WINCAPTURE_MODE_FULLSCREEN)
+		OutputDebugString("全屏\t");
+	if (m_CaptureMode & WINCAPTURE_MODE_WINID)
+		OutputDebugString("HWND\t");
+	if (m_CaptureMode & WINCAPTURE_MODE_RECT)
+		OutputDebugString("RECT\t");
+	if (m_CaptureMode & WINCAPTURE_MODE_XYWH)
+		OutputDebugString("XYWH\t");	
+	if (m_CaptureMode & WINCAPTURE_MODE_ICONIC)
+		OutputDebugString("(窗口最小化)\t");
+	if (m_CaptureMode & WINCAPTURE_MODE_CLOSED)
+		OutputDebugString("(窗口关闭)\t");
+	OutputDebugString("\n");
 
 	// 设置状态为正在捕获
 	m_IsCapturing = WINCAPTURE_TURE;
@@ -151,8 +189,11 @@ void WinCapture::FreeWindowList()
 // 
 WResult WinCapture::SetCaptureTarget(std::string WinText)
 {
+	// 重新设置为第一次捕获
+	m_bModeFirstTime = true;
+
 	// 获取窗口列表
-	if (!m_WinList->Title.size())
+	// if (!m_WinList->Title.size())
 		this->GetWindowList();
 
 	// 寻找指定窗口
@@ -181,7 +222,7 @@ WResult WinCapture::SetCaptureTarget(std::string WinText)
 	else {
 		m_CaptureSetting->WinID = wantedWindow;
 		if (IsIconic(wantedWindow)) {		// 窗口处于最小化
-			m_CaptureMode = WINCAPTURE_MODE_FULLSCREEN;
+			m_CaptureMode = WINCAPTURE_MODE_ICONIC | WINCAPTURE_MODE_WINID;
 			OutputDebugString("窗口处于最小化\n");
 			return WINCAPTURE_ERROR_EXPECTED;
 		}
@@ -192,6 +233,7 @@ WResult WinCapture::SetCaptureTarget(std::string WinText)
 			if (m_CaptureSetting->TargetRect.right > GetSystemMetrics(SM_CXSCREEN)) m_CaptureSetting->TargetRect.right = GetSystemMetrics(SM_CXSCREEN);
 			if (m_CaptureSetting->TargetRect.bottom > GetSystemMetrics(SM_CYSCREEN)) m_CaptureSetting->TargetRect.bottom = GetSystemMetrics(SM_CYSCREEN);
 
+			// 判断窗口能否被HWND方式截获
 			m_CaptureMode = WINCAPTURE_MODE_WINID;
 			OutputDebugString("成功找到窗口\n");
 			return WINCAPTURE_SUCCESS;
@@ -240,7 +282,7 @@ WResult WinCapture::SetCaptureTarget(const unsigned int x, const unsigned int y,
 		m_CaptureSetting->Anchor = ptAnchor;
 
 		m_CaptureMode = WINCAPTURE_MODE_XYWH;
-		OutputDebugString("设置成功\n");
+		OutputDebugString("XYWH设置成功\n");
 		return WINCAPTURE_SUCCESS;
 	}
 	else {
@@ -277,7 +319,7 @@ void WinCapture::OnCapturedFrameAvailable(WINCAPTURE_FRAMEDATA* userFrameData, U
 	userFrameData->CursorPos = m_FrameData->CursorPos;
 	userFrameData->uSize = m_FrameData->uSize;
 
-	uTimeStamp = m_CaptureSetting->TimeStamp;
+	uTimeStamp = GetTickCount64() + m_CaptureSetting->OffsetTimeStamp;
 
 	ptMouse = m_FrameData->CursorPos;
 }
@@ -290,21 +332,35 @@ void WinCapture::OnCapturedFrameAvailable(WINCAPTURE_FRAMEDATA* userFrameData, U
 //
 // 根据矩形范围获取截图
 //
-//
 WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 {
 	HWND testWin = (HWND)m_CaptureSetting->WinID;
 
 	// 根据当前模式选择HDC为屏幕或者指定窗口
-	HDC hDC = m_CaptureMode == 1 ? GetDC(testWin) : GetDC(NULL);
+	HDC hDC = ((m_CaptureMode & WINCAPTURE_MODE_WINID) && !(m_CaptureMode & WINCAPTURE_MODE_RECT)) ? GetWindowDC(testWin) : GetWindowDC(NULL);
 
-	// 算出长宽
+	// 算出长宽, 但是如果为WINID方式, 需要修改
 	UINT width = targetRECT.right - targetRECT.left;
-	UINT height = targetRECT.bottom - targetRECT.top;
+	UINT height = (targetRECT.bottom - targetRECT.top);
+	if (m_CaptureMode & WINCAPTURE_MODE_WINID) {
+		RECT fullRect = { 0 };
+		GetWindowRect(testWin, &fullRect);
+		if (!IsIconic(testWin)) {
+			width = fullRect.right - fullRect.left;
+			height = fullRect.bottom - fullRect.top;
+		}
+		if (width != targetRECT.right - targetRECT.left && !(m_CaptureMode & WINCAPTURE_MODE_ICONIC)) {
+			OutputDebugString("窗口尺寸发生变化\n");
+			m_CaptureSetting->TargetRect = fullRect;
+		}
+	}
 
-	// 获取桌面DC
-	// HDC hDC;
-	// hDC = GetDC(GetDesktopWindow());
+	// 算出阴影范围
+	UINT shadow = 10;
+	if (m_CaptureMode & WINCAPTURE_MODE_WINID ) {
+		width = width - shadow - shadow;
+		height -= shadow;
+	}
 
 	// 桌面DC的适配器
 	HDC hCompatibleDC = CreateCompatibleDC(hDC);
@@ -318,7 +374,15 @@ WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 	clock_t t1, t2;	// just for test
 	t1 = clock();		// just for test
 	// 使用BitBlt
-	BitBlt(hCompatibleDC, 0, 0, width, height, hDC, targetRECT.left, targetRECT.top, SRCCOPY);
+	if ((m_CaptureMode & WINCAPTURE_MODE_WINID) && !(m_CaptureMode & WINCAPTURE_MODE_RECT)) {
+		BitBlt(hCompatibleDC, 0, 0, width, height, hDC, 0 + shadow, 0, SRCCOPY | CAPTUREBLT);
+	}
+	else if ((m_CaptureMode & WINCAPTURE_MODE_WINID) && (m_CaptureMode & WINCAPTURE_MODE_RECT)) {
+		BitBlt(hCompatibleDC, 0, 0, width, height, hDC, m_CaptureSetting->TargetRect.left + shadow, m_CaptureSetting->TargetRect.top + shadow, SRCCOPY);
+	}
+	else {
+		BitBlt(hCompatibleDC, 0, 0, width, height, hDC, targetRECT.left, targetRECT.top, SRCCOPY);
+	}
 	t2 = clock();		// just for test
 
 	// 获取调色板
@@ -373,7 +437,11 @@ WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 			bitmapInfoHeader.biSizeImage = (bitmapInfoHeader.biSizeImage * 3) / 2;
 	}
 
-	// 重新分配内存大小
+	// 重新分配内存大小, 但是如果当窗口处于最小化时, 直接令biSizeImage = 0
+	if (IsIconic(testWin)) {
+		/*bitmapInfoHeader.biSizeImage = 0;*/
+	}
+
 	dwLength += bitmapInfoHeader.biSizeImage;
 	HANDLE hMem = NULL;
 	if (hMem = GlobalReAlloc(hDIB, dwLength, GMEM_MOVEABLE)) {
@@ -385,7 +453,6 @@ WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 		ReleaseDC(NULL, hTmpDC);
 		return WINCAPTURE_ERROR_EXPECTED;
 	}
-
 	lpBitmapInfoHeader = (LPBITMAPINFOHEADER)hDIB;
 	
 	// 扩张m_FrameData->Data内存
@@ -399,7 +466,25 @@ WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 		(LPBYTE)lpBitmapInfoHeader + (bitmapInfoHeader.biSize + nColors * sizeof(RGBQUAD)),
 		(LPBITMAPINFO)lpBitmapInfoHeader, (DWORD)DIB_RGB_COLORS);
 
-	m_CaptureSetting->IsDisplay = true;
+	// 如果是第一次捕获, 并且hMem全黑, 而且当前窗口是非最小化非关闭状态, 说明BitBlt无法获取当前类型窗口的话, 需要使用捕获全屏的方式截图
+	if (m_bModeFirstTime && (m_CaptureMode & WINCAPTURE_MODE_WINID) && (m_CaptureMode < WINCAPTURE_MODE_ICONIC)) {
+		m_bModeFirstTime = false;		// 已经不是第一次捕获了
+		BYTE* p = reinterpret_cast<BYTE*>(hMem);
+		bool bChangeFlag = true;
+		for (int i = lpBitmapInfoHeader->biSize; i < dwLength; i++) {
+			if (*(p + i) != 0 && *(p+i) != 255) {
+				bChangeFlag = false;
+				break;
+			}
+		}
+		if (bChangeFlag) {
+			m_CaptureMode = WINCAPTURE_MODE_RECT | WINCAPTURE_MODE_WINID;
+			OutputDebugString("更改捕获模式为RECT\n");
+			return WINCAPTURE_ERROR_EXPECTED;
+		}
+	}
+
+	// m_CaptureSetting->IsDisplay = true;
 	// 是否需要绘制鼠标
 	if (m_CaptureSetting->IsDisplay) {
 		// 获取鼠标位置

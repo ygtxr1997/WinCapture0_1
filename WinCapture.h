@@ -4,10 +4,12 @@
 
 class WinCapture
 {
+private:
+	bool m_bModeFirstTime;
 protected:
 	// 成员, 友元可以访问
 	WINCAPTURE_ISCAPTURING m_IsCapturing;		// 是否正在捕获
-	WINCAPTURE_MODE m_CaptureMode;				// 捕获模式(全屏, 窗口)
+	int m_CaptureMode;				// 捕获模式(全屏, 窗口)
 	WINCAPTURE_WINLIST* m_WinList;						// 当前窗口列表
 	WINCAPTURE_SETTING*	m_CaptureSetting;		// 相关捕获设置
 	WINCAPTURE_FRAMEDATA* m_FrameData;		// 帧数据

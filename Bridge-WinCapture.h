@@ -6,74 +6,36 @@
 
 typedef const unsigned int CUI;
 
-static ThreadManager* threadManager;
+namespace ZEGO {
 
-void InitWinCapture()
-{
-	threadManager = new ThreadManager();
-	threadManager->EnableCursorDisplay(true);
-	// threadManager->SetCaptureCallback();
-}
+	namespace Capture {
 
-void AddProducer()
-{
-	threadManager->AddProducer();
-}
+		void InitWinCapture();
 
-void AddConsumer()
-{
-	threadManager->AddConsumer();
-}
+		void AddProducer();
 
-void StopProducers()
-{
-	threadManager->StopProducers();
-}
+		void AddConsumer();
 
-void RestartTasks()
-{
-	threadManager->ReStartTasks();
-}
+		void StopProducers();
 
-void SetCaptureCallback(ICallback* pCallback)
-{
-	threadManager->SetCaptureCallback(pCallback);
-}
+		void RestartTasks();
 
-bool IsCapturing()
-{
-	return threadManager->IsCapturing() ? true : false;
-}
+		void SetCaptureCallback(ICallback** ppCallback);
 
-void SetFPS(unsigned int uFPS)
-{
-	threadManager->SetFPS(uFPS);
-}
+		bool IsCapturing();
 
-void SetCaptureTargetByWinText(const char * pcWinText)
-{
-	threadManager->SetCaptureTarget(std::string(pcWinText));
-}
+		void SetFPS(unsigned int uFPS);
 
-void SetCaptureTargetByRECT(RECT rt, bool bFollowupCursor, POINT ptAnchor)
-{
-	threadManager->SetCaptureTarget(rt, bFollowupCursor, ptAnchor);
-}
+		void SetCaptureTargetByWinText(const char * pcWinText);
 
-void SetCaptureTargetByXYWH(CUI x, CUI y, CUI width, CUI height)
-{
-	threadManager->SetCaptureTarget(x, y, width, height);
-}
+		void SetCaptureTargetByRECT(RECT rt, bool bFollowupCursor, POINT ptAnchor);
 
-void SetEnableCursorDisplay(bool bDisplay)
-{
-	threadManager->EnableCursorDisplay(bDisplay);
-}
+		void SetCaptureTargetByXYWH(CUI x, CUI y, CUI width, CUI height);
 
-//
-// callback
-//
-void OnFinishedOneFrame(WINCAPTURE_FRAMEDATA* outFrameData)
-{
-	threadManager->OnFinishedOneFrame(outFrameData);
+		void SetEnableCursorDisplay(bool bDisplay);
+
+		void GetWindowList(WINCAPTURE_WINLIST* outWinList);
+
+		void FreeWindowList(WINCAPTURE_WINLIST* inWinList);
+	}
 }

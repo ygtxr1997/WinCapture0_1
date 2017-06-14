@@ -42,10 +42,9 @@ bool ThreadManager::ReStartTasks() {
 	return true;
 }
 
-void ThreadManager::SetCaptureCallback(ICallback* pCallback)
+void ThreadManager::SetCaptureCallback(ICallback** ppCallback)
 {
-	pCallback = m_Factory->_pCallback;
-	m_Callback = pCallback;
+	*ppCallback = m_Factory->_pCallback;
 }
 
 WINCAPTURE_ISCAPTURING ThreadManager::IsCapturing()
@@ -55,7 +54,10 @@ WINCAPTURE_ISCAPTURING ThreadManager::IsCapturing()
 
 WResult ThreadManager::SetFPS(unsigned int uFPS)
 {
-	m_Factory->_ComsumerSleepTime = (unsigned int)1000 / uFPS;
+	m_Factory->_ComsumerSleepTime = (unsigned int)1000 / uFPS - 50;
+	if (m_Factory->_ComsumerSleepTime <= 0) {
+		m_Factory->_ComsumerSleepTime = 1;
+	}
 	return m_Factory->_winCapture->SetFPS(uFPS);
 }
 
@@ -79,9 +81,23 @@ void ThreadManager::EnableCursorDisplay(bool bDisplay)
 	m_Factory->_winCapture->EnableCursorDisplay(bDisplay);
 }
 
-void ThreadManager::OnFinishedOneFrame(WINCAPTURE_FRAMEDATA* outFrameData)
+void ThreadManager::GetWindowList(WINCAPTURE_WINLIST* outWinList)
 {
-	m_Factory->_winCapture->OnFinishedOneFrame(outFrameData);
+	m_Factory->_winCapture->GetWindowList();
+	outWinList->Title.clear();
+	for (unsigned int i = 0; i < m_Factory->_winCapture->m_WinList->Title.size(); i++) {
+		string tempString = m_Factory->_winCapture->m_WinList->Title[i];
+		outWinList->Title.push_back(tempString);
+	}
+}
+
+void ThreadManager::FreeWindowList(WINCAPTURE_WINLIST* inWinList)
+{
+	if (inWinList) {
+		inWinList->Handle.clear();
+		inWinList->Title.clear();
+		delete inWinList;
+	}
 }
 
 

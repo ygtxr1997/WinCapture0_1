@@ -110,7 +110,7 @@ struct WINCAPTURE_FRAMEDATA
 struct ICallback
 {
 	WINCAPTURE_FRAMEDATA* pwcFrameData;
-	UINT64* uTimeStamp;
+	UINT64 uTimeStamp;
 	POINT* ptMouse;
 };
 

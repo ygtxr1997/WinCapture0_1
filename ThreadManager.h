@@ -85,7 +85,7 @@ public:
 	FactoryBase() : _pCallback(new ICallback), m_Sleep(false), item(new WINCAPTURE_FRAMEDATA) {
 		// 完全初始化
 		_pCallback->pwcFrameData = new WINCAPTURE_FRAMEDATA;
-		_pCallback->uTimeStamp = new UINT64;
+		_pCallback->uTimeStamp = 0;
 		_pCallback->ptMouse = new POINT;
 
 	}
@@ -107,9 +107,10 @@ public:
 			
 			_winCapture->StartCapture();
 			_winCapture->OnFinishedOneFrame(item);
-			_winCapture->OnCapturedFrameAvailable(_pCallback->pwcFrameData, *(_pCallback->uTimeStamp), _pCallback->ptMouse);
+			_winCapture->OnCapturedFrameAvailable(_pCallback->pwcFrameData, _pCallback->uTimeStamp, _pCallback->ptMouse);
 			
-			cout << "p-id " << this_thread::get_id() << " is producing x = " << item->CursorPos->x << " y = " << item->CursorPos->y <<endl;
+			// cout << "p-id " << this_thread::get_id() << " is producing x = " << item->CursorPos->x << " y = " << item->CursorPos->y <<endl;
+			cout << "p-id" << this_thread::get_id() << " finished a frame and the timestamp is " << _pCallback->uTimeStamp << endl;
 			m_ProduceItem(m_repo, item);
 
 			lock.unlock();
@@ -169,7 +170,7 @@ public:
 
 	bool ReStartTasks();
 
-	void SetCaptureCallback(ICallback* pCallback);
+	void SetCaptureCallback(ICallback** pCallback);
 
 	WINCAPTURE_ISCAPTURING IsCapturing();
 
@@ -183,7 +184,9 @@ public:
 
 	void EnableCursorDisplay(bool bDisplay);
 
-	void  OnFinishedOneFrame(WINCAPTURE_FRAMEDATA* outFrameData);
+	void GetWindowList(WINCAPTURE_WINLIST* outWinList);
+
+	void FreeWindowList(WINCAPTURE_WINLIST* inWinLIst);
 
 };
 

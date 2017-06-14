@@ -86,12 +86,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Bridge-WinCapture.h" />
-    <ClInclude Include="C-Bridge.h" />
     <ClInclude Include="CommonTypes.h" />
     <ClInclude Include="ThreadManager.h" />
     <ClInclude Include="WinCapture.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Bridge-WinCapture.cpp" />
     <ClCompile Include="ThreadManager.cpp" />
     <ClCompile Include="WinCapture.cpp" />
     <ClCompile Include="WinCapture0.1.cpp" />

@@ -44,10 +44,12 @@ public:
 
 	void EnableCursorDisplay(bool bDisplay);
 
+	void SetTimeStampBenchmark(UINT64 uOffsetTimeStamp);
+
 	// callback
 	void OnFinishedOneFrame(WINCAPTURE_FRAMEDATA* frameData);
 
-	void OnCapturedFrameAvailable(WINCAPTURE_FRAMEDATA* userFrameData, UINT64 uTimeStamp, POINT* ptMouse);
+	void OnCapturedFrameAvailable(WINCAPTURE_FRAMEDATA* userFrameData, UINT64& uTimeStamp, POINT* ptMouse);
 
 };
 

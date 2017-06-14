@@ -1,44 +1,46 @@
 // WinCapture0.1.cpp : 定义控制台应用程序的入口点。
 //
 
-#include "C-Bridge.h"
+#include "Bridge-WinCapture.h"
 
 #define TEST_TIME 100
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	//ThreadManager* threadManager = new ThreadManager();
-	//threadManager->EnableCursorDisplay(false);
 	ICallback* pCallback = new ICallback;
 	
-	ZEGO_InitWinCapture();
+	ZEGO::Capture::InitWinCapture();
 
-	ZEGO_AddProducer();
-	ZEGO_AddConsumer();
+	ZEGO::Capture::AddProducer();
+	ZEGO::Capture::AddConsumer();
 
-	bool bRes = ZEGO_IsCapturing();
+	bool bRes = ZEGO::Capture::IsCapturing();
 
-	ZEGO_SetFPS(40);
+	ZEGO::Capture::SetFPS(20);
 
-	// ZEGO_SetCaptureTargetByWinText("DesktopDuplication - Microsoft Visual Studio");
-	// ZEGO_SetCaptureTargetByWinText("命令提示符");
-	// ZEGO_SetCaptureTargetByWinText("learnZego.farbox.com/test.txt");
-	// ZEGO_SetCaptureTargetByWinText("图片");
-	// ZEGO_SetCaptureTargetByWinText("新标签页 - Google Chrome");
-	ZEGO_SetCaptureTargetByWinText("Word");
+	// ZEGO::Capture::SetCaptureTargetByWinText("DesktopDuplication - Microsoft Visual Studio");
+	ZEGO::Capture::SetCaptureTargetByWinText("命令提示符");
+	// ZEGO::Capture::SetCaptureTargetByWinText("learnZego.farbox.com/test.txt");
+	// ZEGO::Capture::SetCaptureTargetByWinText("图片");
+	// ZEGO::Capture::SetCaptureTargetByWinText("新标签页 - Google Chrome");
+	// ZEGO::Capture::SetCaptureTargetByWinText("PowerPoint 幻灯片放映 - [演示文稿1]");
 	//RECT testRECT = { 0, 0, 1366, 768 };
 	//POINT testAnchor = { 0, 0 };
-	//ZEGO_SetCaptureTargetByRECT(testRECT, false, testAnchor);
-	//ZEGO_SetCaptureTargetByXYWH(0, 0, 1920, 1080);
+	//ZEGO::Capture::SetCaptureTargetByRECT(testRECT, false, testAnchor);
+	//ZEGO::Capture::SetCaptureTargetByXYWH(0, 0, 1920, 1080);
 	
-	ZEGO_SetEnableCursorDisplay(false);
+	ZEGO::Capture::SetEnableCursorDisplay(false);
 
-	// WINCAPTURE_FRAMEDATA* outFrameData = new WINCAPTURE_FRAMEDATA;
-	// ZEGO_OnFinishedOneFrame(outFrameData);
+	WINCAPTURE_WINLIST* testList = new WINCAPTURE_WINLIST;
+	ZEGO::Capture::GetWindowList(testList);
+	
+	/*for (unsigned int i = 0; i < testList->Title.size(); i++)
+	{
+		cout << testList->Title[i] << endl;
+	}*/
 
-
-	/*ZEGO_SetCaptureCallback(pCallback);*/
-	// ZEGO_SetCaptureCallback(pCallback);
+	ZEGO::Capture::SetCaptureCallback(&pCallback);
+	// ZEGO::Capture::SetCaptureCallback(pCallback);
 
 
 	OutputDebugString("任务完成\n");
@@ -47,6 +49,11 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	/*Sleep(1000);
 	threadManager->ReStartTasks();*/
+
+	/*while (1) {
+		Sleep(10);
+		cout << "pCallback时间戳为 " << pCallback->uTimeStamp << endl;
+	}*/
 
 	getchar();
 	return 0;

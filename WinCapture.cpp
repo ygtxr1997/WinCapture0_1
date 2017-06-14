@@ -11,6 +11,7 @@ WinCapture::WinCapture() : m_bModeFirstTime(true),
 	m_CaptureMode(WINCAPTURE_MODE_FULLSCREEN),
 	m_FrameData(new WINCAPTURE_FRAMEDATA)
 {
+	m_CaptureSetting->OffsetTimeStamp = 0;
 }
 
 //
@@ -299,6 +300,14 @@ void WinCapture::EnableCursorDisplay(bool bDisplay)
 	m_CaptureSetting->IsDisplay = bDisplay;
 }
 
+//
+// 设置时间戳校正值
+//
+void WinCapture::SetTimeStampBenchmark(UINT64 uOffsetTimeStamp)
+{
+	m_CaptureSetting->OffsetTimeStamp = uOffsetTimeStamp;
+}
+
 // ------------------------- Callback ----------------------------
 
 //
@@ -312,7 +321,7 @@ void WinCapture::OnFinishedOneFrame(WINCAPTURE_FRAMEDATA* frameData)
 	frameData->uSize = m_FrameData->uSize;
 }
 
-void WinCapture::OnCapturedFrameAvailable(WINCAPTURE_FRAMEDATA* userFrameData, UINT64 uTimeStamp, POINT* ptMouse)
+void WinCapture::OnCapturedFrameAvailable(WINCAPTURE_FRAMEDATA* userFrameData, UINT64& uTimeStamp, POINT* ptMouse)
 {
 	userFrameData->pData = m_FrameData->pData;
 	userFrameData->BytesPerLine = m_FrameData->BytesPerLine;
@@ -322,6 +331,8 @@ void WinCapture::OnCapturedFrameAvailable(WINCAPTURE_FRAMEDATA* userFrameData, U
 	uTimeStamp = GetTickCount64() + m_CaptureSetting->OffsetTimeStamp;
 
 	ptMouse = m_FrameData->CursorPos;
+
+	m_CaptureSetting->TimeStamp = uTimeStamp;
 }
 
 
@@ -334,6 +345,9 @@ void WinCapture::OnCapturedFrameAvailable(WINCAPTURE_FRAMEDATA* userFrameData, U
 //
 WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 {
+	//time_t T1, T2, T3, T4, T5, T6, T7;
+	//T1 = clock();
+
 	HWND testWin = (HWND)m_CaptureSetting->WinID;
 
 	// 根据当前模式选择HDC为屏幕或者指定窗口
@@ -349,8 +363,8 @@ WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 			width = fullRect.right - fullRect.left;
 			height = fullRect.bottom - fullRect.top;
 		}
-		if (width != targetRECT.right - targetRECT.left && !(m_CaptureMode & WINCAPTURE_MODE_ICONIC)) {
-			OutputDebugString("窗口尺寸发生变化\n");
+		if ((width != targetRECT.right - targetRECT.left || height != targetRECT.bottom - targetRECT.top || targetRECT.top != fullRect.top || targetRECT.left != fullRect.left)&& !(m_CaptureMode & WINCAPTURE_MODE_ICONIC)) {
+			OutputDebugString("窗口尺寸或位置发生变化\n");
 			m_CaptureSetting->TargetRect = fullRect;
 		}
 	}
@@ -362,6 +376,8 @@ WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 		height -= shadow;
 	}
 
+	//T2 = clock();
+
 	// 桌面DC的适配器
 	HDC hCompatibleDC = CreateCompatibleDC(hDC);
 
@@ -371,11 +387,11 @@ WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 	// 将位图传入DC适配器
 	SelectObject(hCompatibleDC, hBitmap);
 
-	clock_t t1, t2;	// just for test
-	t1 = clock();		// just for test
+	//clock_t t1, t2;	// just for test
+	//t1 = clock();		// just for test
 	// 使用BitBlt
 	if ((m_CaptureMode & WINCAPTURE_MODE_WINID) && !(m_CaptureMode & WINCAPTURE_MODE_RECT)) {
-		BitBlt(hCompatibleDC, 0, 0, width, height, hDC, 0 + shadow, 0, SRCCOPY | CAPTUREBLT);
+		BitBlt(hCompatibleDC, 0, 0, width, height, hDC, 0 + shadow, 0, SRCCOPY);
 	}
 	else if ((m_CaptureMode & WINCAPTURE_MODE_WINID) && (m_CaptureMode & WINCAPTURE_MODE_RECT)) {
 		BitBlt(hCompatibleDC, 0, 0, width, height, hDC, m_CaptureSetting->TargetRect.left + shadow, m_CaptureSetting->TargetRect.top + shadow, SRCCOPY);
@@ -383,7 +399,7 @@ WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 	else {
 		BitBlt(hCompatibleDC, 0, 0, width, height, hDC, targetRECT.left, targetRECT.top, SRCCOPY);
 	}
-	t2 = clock();		// just for test
+	//t2 = clock();		// just for test
 
 	// 获取调色板
 	HPALETTE hPalette = (HPALETTE)GetStockObject(DEFAULT_PALETTE);
@@ -409,6 +425,8 @@ WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 
 	DWORD dwLength = bitmapInfoHeader.biSize + nColors * sizeof(RGBQUAD);
 
+	//T3 = clock();
+
 	// 临时DC
 	HDC hTmpDC = GetDC(NULL);
 	hPalette = SelectPalette(hTmpDC, hPalette, FALSE);
@@ -428,6 +446,8 @@ WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 	BOOL b = GetDIBits(hTmpDC, hBitmap, 0L, (DWORD)bitmapInfoHeader.biHeight, (LPBYTE)NULL, (LPBITMAPINFO)lpBitmapInfoHeader, (DWORD)DIB_RGB_COLORS);
 
 	bitmapInfoHeader = *lpBitmapInfoHeader;
+
+	//T4 = clock();
 
 	// 图像的每行都对齐32字节
 	if (bitmapInfoHeader.biSizeImage == 0) {
@@ -455,23 +475,31 @@ WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 	}
 	lpBitmapInfoHeader = (LPBITMAPINFOHEADER)hDIB;
 	
+	//time_t T41 = clock();
+
 	// 扩张m_FrameData->Data内存
+	auto head = bitmapInfoHeader.biSize;
 	if (m_FrameData->uSize != 0) 
 		delete m_FrameData->pData;
-	(m_FrameData->pData) = new BYTE[dwLength];
-	memcpy(m_FrameData->pData, reinterpret_cast<void*>(hMem), dwLength);
-	m_FrameData->uSize = dwLength;
+	(m_FrameData->pData) = new BYTE[dwLength - head];
+	memcpy(m_FrameData->pData, reinterpret_cast<BYTE*>(hMem) + head, dwLength - head);
+	m_FrameData->uSize = dwLength - head;
+
+	//time_t T42 = clock();
 
 	b = GetDIBits(hTmpDC, hBitmap, 0L, (DWORD)bitmapInfoHeader.biHeight,
 		(LPBYTE)lpBitmapInfoHeader + (bitmapInfoHeader.biSize + nColors * sizeof(RGBQUAD)),
 		(LPBITMAPINFO)lpBitmapInfoHeader, (DWORD)DIB_RGB_COLORS);
+
+
+	//time_t T43 = clock();
 
 	// 如果是第一次捕获, 并且hMem全黑, 而且当前窗口是非最小化非关闭状态, 说明BitBlt无法获取当前类型窗口的话, 需要使用捕获全屏的方式截图
 	if (m_bModeFirstTime && (m_CaptureMode & WINCAPTURE_MODE_WINID) && (m_CaptureMode < WINCAPTURE_MODE_ICONIC)) {
 		m_bModeFirstTime = false;		// 已经不是第一次捕获了
 		BYTE* p = reinterpret_cast<BYTE*>(hMem);
 		bool bChangeFlag = true;
-		for (int i = lpBitmapInfoHeader->biSize; i < dwLength; i++) {
+		for (unsigned int i = lpBitmapInfoHeader->biSize; i < dwLength; i++) {
 			if (*(p + i) != 0 && *(p+i) != 255) {
 				bChangeFlag = false;
 				break;
@@ -483,6 +511,8 @@ WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 			return WINCAPTURE_ERROR_EXPECTED;
 		}
 	}
+
+	//T5 = clock();
 
 	// m_CaptureSetting->IsDisplay = true;
 	// 是否需要绘制鼠标
@@ -563,6 +593,7 @@ WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 		bitmapFileHeader = NULL;
 	}
 
+	//T6 = clock();
 
 
 	ReleaseDC(NULL, hDC);
@@ -574,6 +605,8 @@ WResult WinCapture::_GetSnapShotByRect(RECT targetRECT)
 	DeleteObject(lpBitmapInfoHeader);
 
 	hDC = NULL; hBitmap = NULL; hPalette = NULL; _bitmap = { 0 }; hDIB = NULL; hCompatibleDC = NULL; hMem = NULL; lpBitmapInfoHeader = NULL;
+
+	//T7 = clock();
 
 	return WINCAPTURE_SUCCESS;
 }
